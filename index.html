@@ -2,71 +2,115 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>cyronEX | 3D Engine v0.1</title>
+    <title>cyronEX | Alpha V1.0</title>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #000; }
-        canvas { display: block; }
-        #ui { position: absolute; top: 20px; left: 20px; color: #00ffcc; font-family: monospace; pointer-events: none; }
+        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        #crosshair { position: absolute; top: 50%; left: 50%; width: 20px; height: 20px; border: 2px solid white; transform: translate(-50%, -50%); border-radius: 50%; pointer-events: none; }
+        #ui { position: absolute; bottom: 20px; left: 20px; color: white; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 5px; pointer-events: none; }
     </style>
 </head>
 <body>
+    <div id="crosshair"></div>
     <div id="ui">
-        <h1>cyronEX 3D</h1>
-        <p>Durum: Sistemler Online</p>
-        <p>Hedef: Minecraft & Hytale'i Geçmek</p>
+        <b>cyronEX Engine</b><br>
+        W,A,S,D: Hareket | Mouse: Bakış | Sol Tık: Blok Kır | Sağ Tık: Blok Koy
     </div>
 
     <script type="importmap">
-        {
-            "imports": {
-                "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
-            }
-        }
+        { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
     </script>
 
     <script type="module">
         import * as THREE from 'three';
+        import { PointerLockControls } from 'https://unpkg.com/three@0.160.0/examples/jsm/controls/PointerLockControls.js';
 
-        // 1. SAHNE VE KAMERA AYARLARI
+        // --- SAHNE KURULUMU ---
         const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x87CEEB); // Gökyüzü mavisi
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        // 2. İLK BLOK (Küp)
+        // --- KONTROLLER ---
+        const controls = new PointerLockControls(camera, document.body);
+        document.body.addEventListener('click', () => controls.lock());
+
+        // --- DÜNYA OLUŞTURMA (Voxel Sistemi) ---
         const geometry = new THREE.BoxGeometry(1, 1, 1);
-        const material = new THREE.MeshStandardMaterial({ color: 0x00ffcc, wireframe: false });
-        const cube = new THREE.Mesh(geometry, material);
-        scene.add(cube);
-
-        // 3. IŞIKLANDIRMA (Olmazsa olmaz!)
-        const light = new THREE.PointLight(0xffffff, 50);
-        light.position.set(2, 2, 5);
-        scene.add(light);
-        scene.add(new THREE.AmbientLight(0x404040));
-
-        camera.position.z = 3;
-
-        // 4. ANİMASYON DÖNGÜSÜ
-        function animate() {
-            requestAnimationFrame(animate);
-            
-            // Küpü döndürelim
-            cube.rotation.x += 0.01;
-            cube.rotation.y += 0.01;
-            
-            renderer.render(scene, camera);
+        const textureLoader = new THREE.TextureLoader();
+        const material = new THREE.MeshLambertMaterial({ color: 0x559944 }); // Çimen yeşili
+        
+        const cubes = [];
+        for(let x = -10; x < 10; x++) {
+            for(let z = -10; z < 10; z++) {
+                const cube = new THREE.Mesh(geometry, material);
+                cube.position.set(x, 0, z);
+                scene.add(cube);
+                cubes.push(cube);
+            }
         }
 
-        // Pencere boyutu değişirse düzelt
+        // --- IŞIKLANDIRMA ---
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+        const sunLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        sunLight.position.set(10, 20, 10);
+        scene.add(sunLight);
+
+        // --- HAREKET SİSTEMİ ---
+        let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
+        const velocity = new THREE.Vector3();
+        const direction = new THREE.Vector3();
+
+        const onKeyDown = (e) => {
+            switch (e.code) {
+                case 'KeyW': moveForward = true; break;
+                case 'KeyS': moveBackward = true; break;
+                case 'KeyA': moveLeft = true; break;
+                case 'KeyD': moveRight = true; break;
+            }
+        };
+        const onKeyUp = (e) => {
+            switch (e.code) {
+                case 'KeyW': moveForward = false; break;
+                case 'KeyS': moveBackward = false; break;
+                case 'KeyA': moveLeft = false; break;
+                case 'KeyD': moveRight = false; break;
+            }
+        };
+        document.addEventListener('keydown', onKeyDown);
+        document.addEventListener('keyup', onKeyUp);
+
+        camera.position.y = 1.6; // Oyuncu boyu
+
+        // --- OYUN DÖNGÜSÜ ---
+        function animate() {
+            requestAnimationFrame(animate);
+            if (controls.isLocked) {
+                const delta = 0.15;
+                velocity.x -= velocity.x * 10.0 * delta;
+                velocity.z -= velocity.z * 10.0 * delta;
+
+                direction.z = Number(moveForward) - Number(moveBackward);
+                direction.x = Number(moveRight) - Number(moveLeft);
+                direction.normalize();
+
+                if (moveForward || moveBackward) velocity.z -= direction.z * 400.0 * delta;
+                if (moveLeft || moveRight) velocity.x -= direction.x * 400.0 * delta;
+
+                controls.moveRight(-velocity.x * delta);
+                controls.moveForward(-velocity.z * delta);
+            }
+            renderer.render(scene, camera);
+        }
+        animate();
+
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
-
-        animate();
     </script>
 </body>
 </html>
