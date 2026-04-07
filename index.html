@@ -2,18 +2,71 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>cyronEX | Devrim Başlıyor</title>
+    <title>cyronEX | 3D Engine v0.1</title>
     <style>
-        body { margin: 0; background-color: #000; color: #fff; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
-        h1 { font-size: 3rem; text-shadow: 0 0 20px #00ffcc; }
+        body { margin: 0; overflow: hidden; background-color: #000; }
+        canvas { display: block; }
+        #ui { position: absolute; top: 20px; left: 20px; color: #00ffcc; font-family: monospace; pointer-events: none; }
     </style>
 </head>
 <body>
-    <h1>cyronEX: Yükleniyor...</h1>
-    
-    <script>
-        console.log("cyronEX projesi başarıyla başlatıldı! Devleri geçmeye hazır mısın?");
+    <div id="ui">
+        <h1>cyronEX 3D</h1>
+        <p>Durum: Sistemler Online</p>
+        <p>Hedef: Minecraft & Hytale'i Geçmek</p>
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+
+        // 1. SAHNE VE KAMERA AYARLARI
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // 2. İLK BLOK (Küp)
+        const geometry = new THREE.BoxGeometry(1, 1, 1);
+        const material = new THREE.MeshStandardMaterial({ color: 0x00ffcc, wireframe: false });
+        const cube = new THREE.Mesh(geometry, material);
+        scene.add(cube);
+
+        // 3. IŞIKLANDIRMA (Olmazsa olmaz!)
+        const light = new THREE.PointLight(0xffffff, 50);
+        light.position.set(2, 2, 5);
+        scene.add(light);
+        scene.add(new THREE.AmbientLight(0x404040));
+
+        camera.position.z = 3;
+
+        // 4. ANİMASYON DÖNGÜSÜ
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            // Küpü döndürelim
+            cube.rotation.x += 0.01;
+            cube.rotation.y += 0.01;
+            
+            renderer.render(scene, camera);
+        }
+
+        // Pencere boyutu değişirse düzelt
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
     </script>
 </body>
 </html>
